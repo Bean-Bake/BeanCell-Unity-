@@ -1,0 +1,168 @@
+GetClick()
+{
+    if (Left Click Down)
+    {
+        check what clicked
+        if (Card)
+        {
+            if selected list is empty
+                select card
+            else
+                try to move card(s) in selected here
+        }
+        if (Foundation)
+        {
+            Do Foundation Stuff
+        }
+        if (Cell)
+        {
+            Do Cell Stuff
+        }
+        if (Cascade)
+        {
+            Do Cascade Stuff
+        }
+    }
+    if (Right Click Down (or Double Click????))
+    {
+        if (Card)
+        {
+            Either send to foundation or cell depending on what fits
+        }
+        if (Foundation or Cell or Cascade)
+        {
+            Do nothing
+        }
+    }
+}
+
+Card Stuff()
+{
+    If (no card is selected yet)
+    {
+        try to select this card (think ValidSelect)
+    }
+    else
+    {
+        if (this card is already selected)
+        {
+            Deselect
+        }
+        if (A different card is selected)
+        {
+            Check if we can move it here (Think ValidMove)
+            If so, Move (MoveCards?)
+        }
+    }
+}
+
+selectCard(GameObject card)
+{
+    if card is in Cell AND there are no selected cards
+        select it
+    if card is in Foundation AND there are no selected cards
+        select it
+
+    else (if the card is in a Cascade)
+        find row and index where card is
+        from (that card's index to the last index in the background card arrays)
+            check if it's stacked properly (descending rank by 1, alternating color)
+            if (true)
+                add to the selected list
+            else
+                clear the selected list, abort selectCard
+
+    
+}
+
+moveCard(GameObject spotToMove)
+{
+    if spotToMove is cell
+        if more than one card in selected list
+            NOPE
+        else
+            move card on top of cell, notate that in card properties
+
+
+    if spotToMove is Foundation
+
+    if spotToMove is another card
+        check if it's a valid move by comparing top card of selected stack to card
+        if (true)
+            move them
+}
+
+ValidSelect()
+{
+    find row of card
+    Find number of cards in cells
+    
+    Get number of cards trying to be selected
+        This is last index - index of "top" card + 1
+        (Ex. Last is I5. Top Card is I3. 5 - 3 = 2; 2 + 1 = 3; I3, I4, I5 are three cards being selected)
+    Compare that against number of cells in use.
+        Every cell with a card in it reduces max select by 1.
+        So with 0 cards, 5 total valid selects
+        With 4 cards, 1 valid select
+
+    If (number of cards selected > valid selects), INVALID
+
+    Else
+    {
+        check every card from this card to end of list
+        if (any don't follow the pattern (alternating suit, descending))
+            INVALID
+        else
+            VALID
+    }
+}
+
+Foundation Stuff()
+{
+    If no card is selected, do nothing
+    Else
+    {
+        only one card may be selected and moved to a foundation
+    }
+}
+
+Foundation Stuff()
+{
+    If no card is selected, do nothing
+    Else
+    {
+        only one card may be selected and moved to a foundation
+        check it's either the ace of an empty foundation or if it follows the proper sequence
+    }
+}
+
+Cell Stuff()
+{
+    If no card is selected, do nothing
+    Else
+    {
+        only one card may be selected and moved to a cell at one time
+        check if slot is filled, move if not
+    }
+}
+
+Cascade Stuff()
+{
+    If no card is selected, do nothing
+    Else
+    {
+        Check valid move
+    }
+}
+
+ValidMove()
+{
+    If moving to cell
+    {
+        Only one card allowed
+    }
+    If moving to foundation
+    {
+        Only one card allowed, proper sequence
+    }
+}
