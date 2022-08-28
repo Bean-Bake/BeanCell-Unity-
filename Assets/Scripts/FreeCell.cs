@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 using UnityEngine.SceneManagement;
+using System;
 
 public class FreeCell : MonoBehaviour
 {
+    GameObject freeCell;
+    
     // Sprite Arrays and Lists of Game Object Holders (Foundations, Cells, Cascades)
     public Sprite[] cardFronts;
     public GameObject[] cascadesList;
@@ -33,6 +36,7 @@ public class FreeCell : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        freeCell = GameObject.Find("FreeCell Game");
         deck = CreateDeck();
         ShuffleDeck();
 
@@ -45,7 +49,8 @@ public class FreeCell : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (gameOver())
+        StartCoroutine(GameOverShortcut());
+        if (GameOver())
         {
              SceneManager.LoadScene("Main Menu");
         }
@@ -69,9 +74,12 @@ public class FreeCell : MonoBehaviour
     // Shuffle cards
     void ShuffleDeck()
     {
+        int seed = Environment.TickCount;
+        GlobalVariables.SetGameSeed(seed);
+        System.Random shuffleIndex = new System.Random(seed);
+
         for (int i = 0; i < 300; i++)
 			{
-                System.Random shuffleIndex = new System.Random();
 				// find two random indices of the array and create a temporary placeholder
 				int randOne = shuffleIndex.Next(52);
 				int randTwo = shuffleIndex.Next(52);
@@ -82,6 +90,44 @@ public class FreeCell : MonoBehaviour
 				deck[randOne] = deck[randTwo];
 				deck[randTwo] = temp;
 			}
+    }
+
+    // Shuffle cards
+    void ShuffleDeck(int seed)
+    {
+        GlobalVariables.SetGameSeed(seed);
+        System.Random shuffleIndex = new System.Random(seed);
+        
+        for (int i = 0; i < 300; i++)
+        {
+            // find two random indices of the array and create a temporary placeholder
+            int randOne = shuffleIndex.Next(52);
+            int randTwo = shuffleIndex.Next(52);
+            Card temp = null;
+            
+            // swap cards at those two indices using that temporary placeholder
+            temp = deck[randOne];
+            deck[randOne] = deck[randTwo];
+            deck[randTwo] = temp;
+        }
+    }
+
+    void ShuffleFromGlobal()
+    {
+        System.Random shuffleIndex = new System.Random(GlobalVariables.GetGameSeed());
+        
+        for (int i = 0; i < 300; i++)
+        {
+            // find two random indices of the array and create a temporary placeholder
+            int randOne = shuffleIndex.Next(52);
+            int randTwo = shuffleIndex.Next(52);
+            Card temp = null;
+            
+            // swap cards at those two indices using that temporary placeholder
+            temp = deck[randOne];
+            deck[randOne] = deck[randTwo];
+            deck[randTwo] = temp;
+        }        
     }
 
 
@@ -162,7 +208,7 @@ public class FreeCell : MonoBehaviour
         }
     }
 
-    bool gameOver()
+    bool GameOver()
     {
         foreach (GameObject foundation in foundationsList)
         {
@@ -173,4 +219,60 @@ public class FreeCell : MonoBehaviour
         }
         return true;
     } 
+
+    IEnumerator GameOverShortcut()
+    {
+        foreach (GameObject cascade in cascadesList)
+        {
+            if (cascade.transform.childCount < 2)
+            {
+                continue;
+            }
+            else
+            {
+                for (int i = cascade.transform.childCount - 1; i > 0; i--)
+                {
+                    if (gameObject.GetComponent<UInput>().ValidStack(cascade.transform.GetChild(i).gameObject, cascade.transform.GetChild(i - 1).gameObject))
+                    {
+                        continue;
+                    }
+                    yield break;
+                }
+            }
+        }
+
+        while (!GameOver())
+        {
+            foreach (GameObject cascade in cascadesList)
+            {
+                if (cascade.transform.childCount > 0)
+                {
+                    foreach (GameObject foundation in foundationsList)
+                    {
+                        if (gameObject.GetComponent<UInput>().ValidStack(cascade.transform.GetChild(cascade.transform.childCount - 1).gameObject, foundation.transform.GetChild(foundation.transform.childCount - 1).gameObject))
+                        {                           
+                            yield return new WaitForSeconds(.5f);
+                            gameObject.GetComponent<UInput>().Shortcut(cascade.transform.GetChild(cascade.transform.childCount - 1).gameObject);
+                            break;
+                        }
+                    }
+                }
+            }
+            foreach (GameObject cell in cellsList)
+            {
+                if (cell.transform.childCount > 0)
+                {
+                    foreach (GameObject foundation in foundationsList)
+                    {
+                        if (gameObject.GetComponent<UInput>().ValidStack(cell.transform.GetChild(cell.transform.childCount - 1).gameObject, foundation.transform.GetChild(foundation.transform.childCount - 1).gameObject))
+                        {
+                            yield return new WaitForSeconds(.5f);
+                            gameObject.GetComponent<UInput>().Shortcut(cell.transform.GetChild(cell.transform.childCount - 1).gameObject);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

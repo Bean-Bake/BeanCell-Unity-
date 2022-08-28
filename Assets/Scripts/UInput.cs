@@ -171,7 +171,7 @@ public class UInput : MonoBehaviour
         }
     }
 
-    bool ValidStack(GameObject card, GameObject spotToStack)
+    public bool ValidStack(GameObject card, GameObject spotToStack)
     {
         if (spotToStack.CompareTag("Cascade"))
         {
@@ -384,7 +384,7 @@ public class UInput : MonoBehaviour
         }
     }
 
-    void Shortcut(GameObject card)
+    public void Shortcut(GameObject card)
     {
         if (card.CompareTag("Card") && card.transform.GetSiblingIndex() == card.transform.parent.childCount - 1)
         {
