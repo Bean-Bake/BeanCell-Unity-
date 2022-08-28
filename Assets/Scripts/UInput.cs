@@ -3,10 +3,25 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 
+public struct NewMove
+{
+    public int topCardIndex;
+    public Transform startingParent; 
+    public Transform destinationParent;
+
+    public NewMove(int index, Transform start, Transform destination)
+    {
+        topCardIndex = index;
+        startingParent = start; 
+        destinationParent = destination;
+    }
+}
+
 public class UInput : MonoBehaviour
 {
     public List<GameObject> selected = new List<GameObject>();
     private FreeCell game;
+    public Stack<NewMove> moveList = new Stack<NewMove>();
 
     // Start is called before the first frame update
     void Start()
@@ -82,6 +97,28 @@ public class UInput : MonoBehaviour
                 }
             }
         }
+
+        // FOR DEBUGGING / GOD MODE GAMEPLAY
+        /* else if (Input.GetMouseButtonDown(2))
+        {
+            Vector3 mousePos = Camera.main.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, Input.mousePosition.z));
+            RaycastHit2D hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(Input.mousePosition), Vector2.zero);
+
+            if (hit)
+            {
+                if (hit.collider.CompareTag("Card"))
+                {
+                    if (selected.Count == 0)
+                    {
+                        FreeSelect(hit.collider.gameObject);
+                    }
+                    else
+                    {
+                        FreeMove(hit.collider.gameObject);
+                    }
+                }
+            }
+        } */
     }
 
     void SelectCard(GameObject card)
@@ -225,6 +262,8 @@ public class UInput : MonoBehaviour
 
         if (ValidStack(selected[0], spotToStack))
         {
+            int topCardIndex = destinationParent.transform.childCount;
+
             for (int i = 0; i < selected.Count; i++)
             {
                 if (startingParent.gameObject.CompareTag("Cell") && !spotToStack.CompareTag("Cell"))
@@ -246,6 +285,102 @@ public class UInput : MonoBehaviour
             }
 
             selected.Clear();
+
+            NewMove newMove = new NewMove(topCardIndex, startingParent, destinationParent);
+            moveList.Push(newMove);
+        }
+    }
+
+    void FreeStackCards(GameObject spotToStack, Transform startingParent, Transform destinationParent)
+    {
+        // offset of Card Game Object(s) to whatever they are stacked on
+        // If the selected are moving to a Cell, Foundation, a Card in a Foundation, or an empty Cascade, no offset
+        float yOffset = 0.0f;
+        float zOffset = 0.01f;
+
+        // If being moved to a card that's not in a foundation (IE in a Cascade), stack it like cards (offset slightly)
+        if (spotToStack.gameObject.CompareTag("Card") && !spotToStack.transform.parent.gameObject.CompareTag("Foundation"))
+        {
+            yOffset = 0.5f;
+        }
+
+        for (int i = 0; i < selected.Count; i++)
+        {
+            if (startingParent.gameObject.CompareTag("Cell") && !spotToStack.CompareTag("Cell"))
+            {
+                game.cellsFilled--;
+            }
+            else if (!startingParent.gameObject.CompareTag("Cell") && spotToStack.CompareTag("Cell"))
+            {
+                game.cellsFilled++;
+            }
+            selected[i].transform.position = 
+            new Vector3(spotToStack.transform.position.x, 
+                        spotToStack.transform.position.y - yOffset, 
+                        spotToStack.transform.position.z - zOffset);
+            selected[i].transform.parent = destinationParent; // this makes the children move with the parents
+
+            yOffset += 0.5f;
+            zOffset += .01f;
+        }
+
+        selected.Clear();
+        moveList.Pop();
+    }
+
+    void FreeSelect(GameObject card)
+    {
+        if (!card.CompareTag("Card"))
+        {
+            return;
+        }
+        else
+        {
+            selected.Clear();
+
+            int cardIndex = card.transform.GetSiblingIndex();
+            int containerCount = card.transform.parent.childCount;
+
+            for (int i = cardIndex; i < containerCount; i++)
+            {
+                selected.Add(card.transform.parent.GetChild(i).gameObject);
+            }
+        }
+    }
+
+    void FreeMove(GameObject spotToStack)
+    {
+        // Start by identifying the list holding the selected card(s)
+        Transform startingParent = selected[0].transform.parent;
+
+        // Then identify the destination list
+        Transform destinationParent;
+
+        // If destination is a Card
+        if (spotToStack.CompareTag("Card"))
+        {
+            destinationParent = spotToStack.transform.parent;
+        }
+        // Otherwise, it must be an empty Cell, Foundation, or Cascade
+        else
+        {
+            destinationParent = spotToStack.transform;
+        }
+
+        FreeStackCards(spotToStack, startingParent, destinationParent);
+    }
+
+    public void Undo()
+    {
+        FreeSelect(moveList.Peek().destinationParent.GetChild(moveList.Peek().topCardIndex).gameObject);
+
+        if (moveList.Peek().startingParent.childCount == 0)
+        {
+            FreeMove(moveList.Peek().startingParent.gameObject);
+        }
+        else
+        {
+            FreeMove(moveList.Peek().startingParent.GetChild(moveList.Peek().startingParent.childCount - 1).gameObject);
         }
     }
 

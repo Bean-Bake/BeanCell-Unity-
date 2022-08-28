@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using UnityEngine.SceneManagement;
 
 public class FreeCell : MonoBehaviour
 {
@@ -39,13 +40,15 @@ public class FreeCell : MonoBehaviour
 
         SortIntoCascades();
         DealDeck();
-        //PrintCascades();
     }
 
     // Update is called once per frame
     void Update()
     {
-        
+        if (gameOver())
+        {
+             SceneManager.LoadScene("Main Menu");
+        }
     }
 
     // Create deck of cards
@@ -158,4 +161,16 @@ public class FreeCell : MonoBehaviour
             }
         }
     }
+
+    bool gameOver()
+    {
+        foreach (GameObject foundation in foundationsList)
+        {
+            if (foundation.transform.childCount < 13)
+            {
+                return false;
+            }
+        }
+        return true;
+    } 
 }
