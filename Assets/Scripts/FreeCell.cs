@@ -8,6 +8,8 @@ using System;
 public class FreeCell : MonoBehaviour
 {
     GameObject freeCell;
+    bool gameOverHappening;
+    bool gameStarted;
     
     // Sprite Arrays and Lists of Game Object Holders (Foundations, Cells, Cascades)
     public Sprite[] cardFronts;
@@ -38,21 +40,25 @@ public class FreeCell : MonoBehaviour
     {
         freeCell = GameObject.Find("FreeCell Game");
         deck = CreateDeck();
-        ShuffleDeck();
+        ShuffleDeck(GlobalVariables.GetGameSeed());
 
         cascadeBoard = new List<Card>[] {cascade0, cascade1, cascade2, cascade3, cascade4, cascade5, cascade6, cascade7};
 
         SortIntoCascades();
-        DealDeck();
+        StartCoroutine(DealDeck());
     }
 
     // Update is called once per frame
     void Update()
     {
-        StartCoroutine(GameOverShortcut());
+        if (!gameOverHappening && gameStarted)
+        {
+            GameOverShortcut();
+        }
+
         if (GameOver())
         {
-             SceneManager.LoadScene("Main Menu");
+            SceneManager.LoadScene("Main Menu");
         }
     }
 
@@ -154,7 +160,7 @@ public class FreeCell : MonoBehaviour
     }
 
     // Deal Card Game Objects into proper places in game screen
-    void DealDeck()
+    IEnumerator DealDeck()
     {
         for (int i = 0; i < 8; i++)
         {
@@ -164,7 +170,6 @@ public class FreeCell : MonoBehaviour
 
             foreach (Card card in cascadeBoard[i])
             {
-                
                 Vector3 cardLocation = new Vector3(cascadesList[i].transform.position.x, 
                                                     cascadesList[i].transform.position.y - yLocation, 
                                                     cascadesList[i].transform.position.z - zLocation);
@@ -174,15 +179,18 @@ public class FreeCell : MonoBehaviour
 
                 yLocation += .5f;
                 zLocation += .01f;
+                yield return new WaitForSeconds(0.01f);
             }
         }
+
+        gameStarted = true;
     }
 
 
     // EXTRA PRINTING/DEBUG FUNCTIONS
 
     // Prints the deck of cards
-    void printDeck()
+    void PrintDeck()
     {
         foreach (Card card in deck)
         {
@@ -220,7 +228,7 @@ public class FreeCell : MonoBehaviour
         return true;
     } 
 
-    IEnumerator GameOverShortcut()
+    void GameOverShortcut()
     {
         foreach (GameObject cascade in cascadesList)
         {
@@ -236,11 +244,17 @@ public class FreeCell : MonoBehaviour
                     {
                         continue;
                     }
-                    yield break;
+                    return;
                 }
             }
         }
 
+        gameOverHappening = true;
+        StartCoroutine(SendNextToFoundation());
+    }
+
+    IEnumerator SendNextToFoundation()
+    {
         while (!GameOver())
         {
             foreach (GameObject cascade in cascadesList)
@@ -251,13 +265,14 @@ public class FreeCell : MonoBehaviour
                     {
                         if (gameObject.GetComponent<UInput>().ValidStack(cascade.transform.GetChild(cascade.transform.childCount - 1).gameObject, foundation.transform.GetChild(foundation.transform.childCount - 1).gameObject))
                         {                           
-                            yield return new WaitForSeconds(.5f);
+                            yield return new WaitForSeconds(0.05f);
                             gameObject.GetComponent<UInput>().Shortcut(cascade.transform.GetChild(cascade.transform.childCount - 1).gameObject);
                             break;
                         }
                     }
                 }
             }
+
             foreach (GameObject cell in cellsList)
             {
                 if (cell.transform.childCount > 0)
@@ -266,7 +281,7 @@ public class FreeCell : MonoBehaviour
                     {
                         if (gameObject.GetComponent<UInput>().ValidStack(cell.transform.GetChild(cell.transform.childCount - 1).gameObject, foundation.transform.GetChild(foundation.transform.childCount - 1).gameObject))
                         {
-                            yield return new WaitForSeconds(.5f);
+                            yield return new WaitForSeconds(0.05f);
                             gameObject.GetComponent<UInput>().Shortcut(cell.transform.GetChild(cell.transform.childCount - 1).gameObject);
                             break;
                         }

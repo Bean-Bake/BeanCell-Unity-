@@ -99,7 +99,7 @@ public class UInput : MonoBehaviour
         }
 
         // FOR DEBUGGING / GOD MODE GAMEPLAY
-        /* else if (Input.GetMouseButtonDown(2))
+        else if (Input.GetMouseButtonDown(2))
         {
             Vector3 mousePos = Camera.main.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, Input.mousePosition.z));
             RaycastHit2D hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(Input.mousePosition), Vector2.zero);
@@ -118,7 +118,7 @@ public class UInput : MonoBehaviour
                     }
                 }
             }
-        } */
+        }
     }
 
     void SelectCard(GameObject card)
@@ -372,19 +372,34 @@ public class UInput : MonoBehaviour
 
     public void Undo()
     {
-        FreeSelect(moveList.Peek().destinationParent.GetChild(moveList.Peek().topCardIndex).gameObject);
+        if (moveList.Count > 0)
+        {
+            FreeSelect(moveList.Peek().destinationParent.GetChild(moveList.Peek().topCardIndex).gameObject);
 
-        if (moveList.Peek().startingParent.childCount == 0)
-        {
-            FreeMove(moveList.Peek().startingParent.gameObject);
-        }
-        else
-        {
-            FreeMove(moveList.Peek().startingParent.GetChild(moveList.Peek().startingParent.childCount - 1).gameObject);
+            if (moveList.Peek().startingParent.childCount == 0)
+            {
+                FreeMove(moveList.Peek().startingParent.gameObject);
+            }
+            else
+            {
+                FreeMove(moveList.Peek().startingParent.GetChild(moveList.Peek().startingParent.childCount - 1).gameObject);
+            }
         }
     }
 
     public void Shortcut(GameObject card)
+    {
+        selected.Clear();
+
+        bool sentToFoundation = ShortcutToFoundation(card);
+
+        if (!sentToFoundation)
+        {
+            ShortcutToCell(card);
+        }
+    }
+
+    bool ShortcutToFoundation(GameObject card)
     {
         if (card.CompareTag("Card") && card.transform.GetSiblingIndex() == card.transform.parent.childCount - 1)
         {
@@ -396,7 +411,7 @@ public class UInput : MonoBehaviour
                     {
                         SelectCard(card);
                         MoveStack(game.foundationsList[i].transform.GetChild(game.foundationsList[i].transform.childCount - 1).gameObject);
-                        return;
+                        return true;
                     }
                 }
                 else
@@ -405,20 +420,25 @@ public class UInput : MonoBehaviour
                     {
                         SelectCard(card);
                         MoveStack(game.foundationsList[i].gameObject);
-                        return;
+                        return true;
                     }
                 }
             }
-            for (int i = 0; i < game.cellsList.Length; i++)
+        }
+        return false;
+    }
+
+    void ShortcutToCell(GameObject card)
+    {
+        for (int i = 0; i < game.cellsList.Length; i++)
+        {
+            if (game.cellsList[i].transform.childCount == 0)
             {
-                if (game.cellsList[i].transform.childCount == 0)
+                if (ValidStack(card, game.cellsList[i].gameObject))
                 {
-                    if (ValidStack(card, game.cellsList[i].gameObject))
-                    {
-                        SelectCard(card);
-                        MoveStack(game.cellsList[i].gameObject);
-                        return;
-                    }
+                    SelectCard(card);
+                    MoveStack(game.cellsList[i].gameObject);
+                    return;
                 }
             }
         }
