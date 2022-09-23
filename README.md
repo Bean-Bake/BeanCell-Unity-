@@ -16,8 +16,9 @@ All assets are free use as I have no interest in monetizing this. I'm grateful f
 
 Features thus far:
 1) The game totally works. (I guess that should be implied, but I'm saying it anyway!)
-2) Main menu and game over screens
-3) Save/load capability for 1 game. That is, you can choose to start a new game or continue a game already started.
+2) Has a working undo button (can also be saved/loaded with the rest of the game)
+3) Main menu and game over screens
+4) Save/load capability for 1 game. That is, you can choose to start a new game or continue a game already started.
 
 Points of pride:
 1) There are elements of basic recursion used for the game logic
