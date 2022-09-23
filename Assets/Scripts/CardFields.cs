@@ -8,6 +8,7 @@ public class CardFields : MonoBehaviour
     public string suit;
     public string color;
     public int value;
+    public int suitValue;
 
     // Start is called before the first frame update
     void Start()
@@ -23,10 +24,28 @@ public class CardFields : MonoBehaviour
             if (suit == "Spades" || suit == "Clubs")
             {
                 color = "Black";
+
+                if (suit == "Spades")
+                {
+                    suitValue = 0;
+                }
+                else
+                {
+                    suitValue = 2;
+                }
             }
             else
             {
                 color = "Red";
+
+                if (suit == "Diamonds")
+                {
+                    suitValue = 1;
+                }
+                else
+                {
+                    suitValue = 3;
+                }
             }
 
             // card rank/value set to int value based on string value

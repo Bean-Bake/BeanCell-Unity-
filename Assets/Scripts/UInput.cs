@@ -3,25 +3,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 
-public struct NewMove
-{
-    public int topCardIndex;
-    public Transform startingParent; 
-    public Transform destinationParent;
-
-    public NewMove(int index, Transform start, Transform destination)
-    {
-        topCardIndex = index;
-        startingParent = start; 
-        destinationParent = destination;
-    }
-}
-
 public class UInput : MonoBehaviour
 {
     public List<GameObject> selected = new List<GameObject>();
     private FreeCell game;
-    public Stack<NewMove> moveList = new Stack<NewMove>();
 
     // Start is called before the first frame update
     void Start()
@@ -35,6 +20,7 @@ public class UInput : MonoBehaviour
         GetClick();
     }
 
+    // Defines mouse click controls
     void GetClick()
     {
         if (Input.GetMouseButtonDown(0))
@@ -121,6 +107,7 @@ public class UInput : MonoBehaviour
         }
     }
 
+    // Selects cards according to game logic
     void SelectCard(GameObject card)
     {
         // If the card to be selected is either in a cell or a foundation, select it
@@ -171,6 +158,7 @@ public class UInput : MonoBehaviour
         }
     }
 
+    // Checks if the two cards (or a card and a cascade/cell/foundation) are actually legally stackable
     public bool ValidStack(GameObject card, GameObject spotToStack)
     {
         if (spotToStack.CompareTag("Cascade"))
@@ -226,6 +214,7 @@ public class UInput : MonoBehaviour
         }
     }
 
+    // Starts the move routine within the game logic, calls StackCards for the actual movement
     void MoveStack(GameObject spotToStack)
     {  
         // Start by identifying the list holding the selected card(s)
@@ -247,6 +236,7 @@ public class UInput : MonoBehaviour
         StackCards(spotToStack, startingParent, destinationParent);
     }
     
+    // Moves the cards with an offset depending on where, adds move to moveList for undo function
     void StackCards(GameObject spotToStack, Transform startingParent, Transform destinationParent)
     {
         // offset of Card Game Object(s) to whatever they are stacked on
@@ -287,10 +277,83 @@ public class UInput : MonoBehaviour
             selected.Clear();
 
             NewMove newMove = new NewMove(topCardIndex, startingParent, destinationParent);
-            moveList.Push(newMove);
+            game.gameBoard.moveList.Add(newMove);
+            game.SaveGame();
         }
     }
 
+    // Right click shortcut, checks for a valid move to foundation first. if not, sends to cell if there is cell space
+    public void Shortcut(GameObject card)
+    {
+        selected.Clear();
+
+        bool sentToFoundation = ShortcutToFoundation(card);
+
+        if (!sentToFoundation)
+        {
+            ShortcutToCell(card);
+        }
+    }
+
+    // Checks each foundation to see if the card can be sent there. returns true or false and moves if true
+    bool ShortcutToFoundation(GameObject card)
+    {
+        if (card.CompareTag("Card") && card.transform.GetSiblingIndex() == card.transform.parent.childCount - 1)
+        {
+            for (int i = 0; i < game.foundationsList.Length; i++)
+            {
+                if (game.foundationsList[i].transform.childCount > 0)
+                {
+                    if (ValidStack(card, game.foundationsList[i].transform.GetChild(game.foundationsList[i].transform.childCount - 1).gameObject))
+                    {
+                        SelectCard(card);
+                        MoveStack(game.foundationsList[i].transform.GetChild(game.foundationsList[i].transform.childCount - 1).gameObject);
+                        return true;
+                    }
+                }
+                else
+                {
+                    if (ValidStack(card, game.foundationsList[i].gameObject))
+                    {
+                        SelectCard(card);
+                        MoveStack(game.foundationsList[i].gameObject);
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    // moves to cell if possible.
+    void ShortcutToCell(GameObject card)
+    {
+        if (card.CompareTag("Card") && card.transform.GetSiblingIndex() == card.transform.parent.childCount - 1)
+        {
+            for (int i = 0; i < game.cellsList.Length; i++)
+            {
+                if (game.cellsList[i].transform.childCount == 0)
+                {
+                    if (ValidStack(card, game.cellsList[i].gameObject))
+                    {
+                        SelectCard(card);
+                        MoveStack(game.cellsList[i].gameObject);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    /*
+        WHAT FOLLOWS IS GODMODE/ILLEGAL MOVEMENT FOR
+        1) Debugging
+        2) Logic to make the undo function possible
+        THERE ARE SOME BUGGY ELEMENTS TO THESE, BUT THEY'RE ONLY MEANS TO AN END
+        WILL LIKELY REMAIN UNTOUCHED FOR A WHILE
+    */
+
+    // Illegal stack
     void FreeStackCards(GameObject spotToStack, Transform startingParent, Transform destinationParent)
     {
         // offset of Card Game Object(s) to whatever they are stacked on
@@ -325,9 +388,10 @@ public class UInput : MonoBehaviour
         }
 
         selected.Clear();
-        moveList.Pop();
+        game.gameBoard.moveList.RemoveAt(game.gameBoard.moveList.Count - 1);
     }
 
+    // Illegal Select
     void FreeSelect(GameObject card)
     {
         if (!card.CompareTag("Card"))
@@ -348,6 +412,7 @@ public class UInput : MonoBehaviour
         }
     }
 
+    // Illegal move
     void FreeMove(GameObject spotToStack)
     {
         // Start by identifying the list holding the selected card(s)
@@ -370,77 +435,22 @@ public class UInput : MonoBehaviour
         FreeStackCards(spotToStack, startingParent, destinationParent);
     }
 
+    // Uses the illegal select and move in order to undo moves since they likely would not be allowed with regular moves
     public void Undo()
     {
-        if (moveList.Count > 0)
+        if (game.gameBoard.moveList.Count > 0)
         {
-            FreeSelect(moveList.Peek().destinationParent.GetChild(moveList.Peek().topCardIndex).gameObject);
+            FreeSelect(game.gameBoard.moveList[game.gameBoard.moveList.Count - 1].destinationParent.GetChild(game.gameBoard.moveList[game.gameBoard.moveList.Count - 1].topCardIndex).gameObject);
 
-            if (moveList.Peek().startingParent.childCount == 0)
+            if (game.gameBoard.moveList[game.gameBoard.moveList.Count - 1].startingParent.childCount == 0)
             {
-                FreeMove(moveList.Peek().startingParent.gameObject);
+                FreeMove(game.gameBoard.moveList[game.gameBoard.moveList.Count - 1].startingParent.gameObject);
             }
             else
             {
-                FreeMove(moveList.Peek().startingParent.GetChild(moveList.Peek().startingParent.childCount - 1).gameObject);
+                FreeMove(game.gameBoard.moveList[game.gameBoard.moveList.Count - 1].startingParent.GetChild(game.gameBoard.moveList[game.gameBoard.moveList.Count - 1].startingParent.childCount - 1).gameObject);
             }
         }
-    }
-
-    public void Shortcut(GameObject card)
-    {
-        selected.Clear();
-
-        bool sentToFoundation = ShortcutToFoundation(card);
-
-        if (!sentToFoundation)
-        {
-            ShortcutToCell(card);
-        }
-    }
-
-    bool ShortcutToFoundation(GameObject card)
-    {
-        if (card.CompareTag("Card") && card.transform.GetSiblingIndex() == card.transform.parent.childCount - 1)
-        {
-            for (int i = 0; i < game.foundationsList.Length; i++)
-            {
-                if (game.foundationsList[i].transform.childCount > 0)
-                {
-                    if (ValidStack(card, game.foundationsList[i].transform.GetChild(game.foundationsList[i].transform.childCount - 1).gameObject))
-                    {
-                        SelectCard(card);
-                        MoveStack(game.foundationsList[i].transform.GetChild(game.foundationsList[i].transform.childCount - 1).gameObject);
-                        return true;
-                    }
-                }
-                else
-                {
-                    if (ValidStack(card, game.foundationsList[i].gameObject))
-                    {
-                        SelectCard(card);
-                        MoveStack(game.foundationsList[i].gameObject);
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    void ShortcutToCell(GameObject card)
-    {
-        for (int i = 0; i < game.cellsList.Length; i++)
-        {
-            if (game.cellsList[i].transform.childCount == 0)
-            {
-                if (ValidStack(card, game.cellsList[i].gameObject))
-                {
-                    SelectCard(card);
-                    MoveStack(game.cellsList[i].gameObject);
-                    return;
-                }
-            }
-        }
+        game.SaveGame();
     }
 }

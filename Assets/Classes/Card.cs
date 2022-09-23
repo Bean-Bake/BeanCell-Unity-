@@ -1,11 +1,19 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+
+// Card object for serialization as well as setting up the values for Card game objects
+[Serializable]
 public class Card
    {
    // Card properties
-   private int suit;
-   private int rank;
-   private string suitName;
-   private string rankName;
-   private string suitColor;
+   public int suit;
+   public int rank;
+   public string suitName;
+   public string rankName;
+   public string suitColor;
 
    // Constructor with suit and rank values
    public Card(int suit, int rank)

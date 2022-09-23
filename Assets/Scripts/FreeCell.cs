@@ -4,12 +4,20 @@ using UnityEngine;
 using System.Linq;
 using UnityEngine.SceneManagement;
 using System;
+using System.IO;
 
 public class FreeCell : MonoBehaviour
 {
+    // Refers to own object
     GameObject freeCell;
+
+    // bools to avoid errors during starting coroutines
     bool gameOverHappening;
     bool gameStarted;
+
+    // Game board serializable object and deck for starting cards
+    public GameBoard gameBoard;
+    public List<Card> deck;
     
     // Sprite Arrays and Lists of Game Object Holders (Foundations, Cells, Cascades)
     public Sprite[] cardFronts;
@@ -19,32 +27,26 @@ public class FreeCell : MonoBehaviour
 
     // Prefab for Card Game Objects
     public GameObject cardPrefab;
-    
-    public List<Card> deck;
 
-    // BACKGROUND ARRAYS OF CARDS
-    // NOT GAME OBJECTS
-    public List<Card>[] cascadeBoard;
-    private List<Card> cascade0 = new List<Card>();
-    private List<Card> cascade1 = new List<Card>();
-    private List<Card> cascade2 = new List<Card>();
-    private List<Card> cascade3 = new List<Card>();
-    private List<Card> cascade4 = new List<Card>();
-    private List<Card> cascade5 = new List<Card>();
-    private List<Card> cascade6 = new List<Card>();
-    private List<Card> cascade7 = new List<Card>();
     public int cellsFilled = 0;
 
     // Start is called before the first frame update
     void Start()
     {
         freeCell = GameObject.Find("FreeCell Game");
-        deck = CreateDeck();
-        ShuffleDeck(GlobalVariables.GetGameSeed());
+        gameBoard = new GameBoard();
 
-        cascadeBoard = new List<Card>[] {cascade0, cascade1, cascade2, cascade3, cascade4, cascade5, cascade6, cascade7};
+        if (File.Exists(Application.dataPath + "/savedGame.txt"))
+        {
+            LoadGame();
+        }
+        else
+        {
+            deck = CreateDeck();
+            ShuffleDeck(GlobalVariables.GetGameSeed());
+            SortIntoCascades();
+        }
 
-        SortIntoCascades();
         StartCoroutine(DealDeck());
     }
 
@@ -58,7 +60,9 @@ public class FreeCell : MonoBehaviour
 
         if (GameOver())
         {
-            SceneManager.LoadScene("Main Menu");
+            File.Delete(Application.dataPath + "/savedGame.txt");
+            File.Delete(Application.dataPath + "/savedGame.txt.meta");
+            SceneManager.LoadScene("Game Won");
         }
     }
 
@@ -84,7 +88,7 @@ public class FreeCell : MonoBehaviour
         GlobalVariables.SetGameSeed(seed);
         System.Random shuffleIndex = new System.Random(seed);
 
-        for (int i = 0; i < 300; i++)
+        for (int i = 0; i < 400; i++)
 			{
 				// find two random indices of the array and create a temporary placeholder
 				int randOne = shuffleIndex.Next(52);
@@ -104,7 +108,7 @@ public class FreeCell : MonoBehaviour
         GlobalVariables.SetGameSeed(seed);
         System.Random shuffleIndex = new System.Random(seed);
         
-        for (int i = 0; i < 300; i++)
+        for (int i = 0; i < 400; i++)
         {
             // find two random indices of the array and create a temporary placeholder
             int randOne = shuffleIndex.Next(52);
@@ -117,25 +121,6 @@ public class FreeCell : MonoBehaviour
             deck[randTwo] = temp;
         }
     }
-
-    void ShuffleFromGlobal()
-    {
-        System.Random shuffleIndex = new System.Random(GlobalVariables.GetGameSeed());
-        
-        for (int i = 0; i < 300; i++)
-        {
-            // find two random indices of the array and create a temporary placeholder
-            int randOne = shuffleIndex.Next(52);
-            int randTwo = shuffleIndex.Next(52);
-            Card temp = null;
-            
-            // swap cards at those two indices using that temporary placeholder
-            temp = deck[randOne];
-            deck[randOne] = deck[randTwo];
-            deck[randTwo] = temp;
-        }        
-    }
-
 
     // Deal cards into their proper places in background arrays
     void SortIntoCascades()
@@ -144,7 +129,7 @@ public class FreeCell : MonoBehaviour
         {
             for (int j = 0; j < 7; j++)
             {
-                cascadeBoard[i].Add(deck.Last());
+                gameBoard.cascadeBoard[i].cardHolder.Add(deck.Last());
                 deck.RemoveAt(deck.Count - 1);
             }
         }
@@ -153,22 +138,58 @@ public class FreeCell : MonoBehaviour
         {
             for (int j = 0; j < 6; j++)
             {
-                cascadeBoard[i].Add(deck.Last());
+                gameBoard.cascadeBoard[i].cardHolder.Add(deck.Last());
                 deck.RemoveAt(deck.Count - 1);
             }
         }
     }
 
     // Deal Card Game Objects into proper places in game screen
+    // This deals the cascades, the foundations, and the cells in case it's a continued (loaded) game
     IEnumerator DealDeck()
     {
+        for (int i = 0; i < 4; i++)
+        {
+            float yLocation = 0;
+            float zLocation = 0.01f;
+            
+            foreach (Card card in gameBoard.cellBoard[i].cardHolder)
+            {
+                Vector3 cardLocation = new Vector3(cellsList[i].transform.position.x, 
+                                                    cellsList[i].transform.position.y - yLocation, 
+                                                    cellsList[i].transform.position.z - zLocation);
+
+                GameObject newCard = Instantiate(cardPrefab, cardLocation, Quaternion.identity, cellsList[i].transform);
+                newCard.name = card.getWholeName();
+                zLocation += .01f;
+            }
+        }
+
+        for (int i = 0; i < 4; i++)
+        {
+            float yLocation = 0;
+            float zLocation = 0.01f;
+
+            foreach (Card card in gameBoard.foundationBoard[i].cardHolder)
+            {
+                Vector3 cardLocation = new Vector3(foundationsList[i].transform.position.x, 
+                                                    foundationsList[i].transform.position.y - yLocation, 
+                                                    foundationsList[i].transform.position.z - zLocation);
+
+                GameObject newCard = Instantiate(cardPrefab, cardLocation, Quaternion.identity, foundationsList[i].transform);
+                newCard.name = card.getWholeName();
+                zLocation += .01f;
+            }
+        }
+        
+        
         for (int i = 0; i < 8; i++)
         {
 
             float yLocation = 0;
             float zLocation = 0.01f;
 
-            foreach (Card card in cascadeBoard[i])
+            foreach (Card card in gameBoard.cascadeBoard[i].cardHolder)
             {
                 Vector3 cardLocation = new Vector3(cascadesList[i].transform.position.x, 
                                                     cascadesList[i].transform.position.y - yLocation, 
@@ -184,6 +205,7 @@ public class FreeCell : MonoBehaviour
         }
 
         gameStarted = true;
+        SaveGame();
     }
 
 
@@ -203,12 +225,12 @@ public class FreeCell : MonoBehaviour
     public void PrintCascades()
     {
         int count = 0;
-        foreach (List<Card> cascade in cascadeBoard)
+        foreach (CardHolder cascade in gameBoard.cascadeBoard)
         {
             string countS = "Cascade" + count;
             print(countS);
             count++;
-            foreach (Card card in cascade)
+            foreach (Card card in cascade.cardHolder)
             {
                 string cardString = "" + card.getWholeName();
                 print(cardString);
@@ -216,6 +238,8 @@ public class FreeCell : MonoBehaviour
         }
     }
 
+    // Checks if all the foundations are full
+    // If so, game is over
     bool GameOver()
     {
         foreach (GameObject foundation in foundationsList)
@@ -228,6 +252,9 @@ public class FreeCell : MonoBehaviour
         return true;
     } 
 
+    // Checks if the game is essentially over
+    // Once all the cascades are in order or empty, we can ascertain the rest of the work to finish the game is tedious/unnecessary
+    // The game is basically won
     void GameOverShortcut()
     {
         foreach (GameObject cascade in cascadesList)
@@ -253,6 +280,8 @@ public class FreeCell : MonoBehaviour
         StartCoroutine(SendNextToFoundation());
     }
 
+    // Coroutine used to finish game once clearly one
+    // The idea is the player doesn't have to manually move cards as it's tedious
     IEnumerator SendNextToFoundation()
     {
         while (!GameOver())
@@ -287,6 +316,60 @@ public class FreeCell : MonoBehaviour
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // Saves game via JSON serialization
+    // Saves using card classes (not game objects)
+    // Saves game board and undo "stack"
+    public void SaveGame()
+    {
+        gameBoard.Clear();
+
+        for (int i = 0; i < foundationsList.Length; i++)
+        {
+            for (int j = 0; j < foundationsList[i].transform.childCount; j++)
+            {
+                Card card = new Card(foundationsList[i].transform.GetChild(j).GetComponent<CardFields>().suitValue, foundationsList[i].transform.GetChild(j).GetComponent<CardFields>().value);
+                gameBoard.foundationBoard[i].cardHolder.Add(card);
+            }
+        }
+
+        for (int i = 0; i < cellsList.Length; i++)
+        {
+            for (int j = 0; j < cellsList[i].transform.childCount; j++)
+            {
+                Card card = new Card(cellsList[i].transform.GetChild(j).GetComponent<CardFields>().suitValue, cellsList[i].transform.GetChild(j).GetComponent<CardFields>().value);
+                gameBoard.cellBoard[i].cardHolder.Add(card);
+            }
+        }
+
+        for (int i = 0; i < cascadesList.Length; i++)
+        {
+            for (int j = 0; j < cascadesList[i].transform.childCount; j++)
+            {
+                Card card = new Card(cascadesList[i].transform.GetChild(j).GetComponent<CardFields>().suitValue, cascadesList[i].transform.GetChild(j).GetComponent<CardFields>().value);
+                gameBoard.cascadeBoard[i].cardHolder.Add(card);
+            }
+        }
+
+        string json = JsonUtility.ToJson(gameBoard, true);
+        File.WriteAllText(Application.dataPath + "/savedGame.txt", json);
+    }
+
+    //  Loads game via JSON deserialization
+    //  Loads game board and undo "stack"
+    public void LoadGame()
+    {
+        if (File.Exists(Application.dataPath + "/savedGame.txt"))
+        {
+            string save = File.ReadAllText(Application.dataPath + "/savedGame.txt");
+            GameBoard newBoard = JsonUtility.FromJson<GameBoard>(save);
+            gameBoard = newBoard;
+            foreach (NewMove move in gameBoard.moveList)
+            {
+                move.RebuildSelf();
             }
         }
     }
