@@ -31,3 +31,6 @@ Planned/ideal features (I hope I actually get to doing these):
 4) Some sort of solver to tell you when you've lost (I expect this to be the most difficult of all these)
 
 Thanks for playing/perusing!
+![BeanCell Start Menu](https://user-images.githubusercontent.com/111920505/198083846-845088aa-68e4-42b9-bbd5-c5ca660107d9.png)
+![BeanCellAlmostOver](https://user-images.githubusercontent.com/111920505/198083907-92d5113b-221e-4609-84f9-09f338f7946c.png)
+![BeanCellOver](https://user-images.githubusercontent.com/111920505/198083921-52f8d095-24d5-4e72-9917-8ae6e74c26bc.png)
